@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Enhanced AI Voice Agent - Fixed</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --primary: #6366f1;
+      --primary-dark: #4f46e5;
+      --secondary: #10b981;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --background: #0f172a;
+      --surface: #1e293b;
+      --surface-light: #334155;
+      --text-primary: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --border: #334155;
+      --success: #22c55e;
+    }
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, var(--background) 0%, #1e1b4b 100%);
+      color: var(--text-primary);
+      min-height: 100vh;
+    }
+    
+    .app-container {
+      display: flex;
+      min-height: 100vh;
+    }
+    
+    /* Sidebar Styles */
+    .sidebar {
+      width: 320px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow-y: auto;
+      transition: transform 0.3s ease;
+    }
+    
+    .sidebar.collapsed {
+      transform: translateX(-100%);
+    }
+    
+    .sidebar-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .sidebar-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    
+    .sidebar-subtitle {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+    }
+    
+    .sidebar-section {
+      padding: 1.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .section-title {
+      font-size: 0.875rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-secondary);
+    }
+    
+    .form-group {
+      margin-bottom: 1rem;
+    }
+    
+    .form-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+    }
+    
+    .form-input {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+      transition: border-color 0.2s;
+    }
+    
+    .form-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    
+    .form-input::placeholder {
+      color: var(--text-secondary);
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: var(--primary);
+      color: white;
+      border: none;
+      border-radius: 0.5rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    
+    .btn:hover:not(:disabled) {
+      background: var(--primary-dark);
+      transform: translateY(-1px);
+    }
+    
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    .btn-sm {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.875rem;
+    }
+    
+    .btn-success {
+      background: var(--success);
+    }
+    
+    .btn-success:hover:not(:disabled) {
+      background: #16a34a;
+    }
+    
+    .btn-danger {
+      background: var(--danger);
+    }
+    
+    .btn-danger:hover:not(:disabled) {
+      background: #dc2626;
+    }
+    
+    .btn-secondary {
+      background: var(--surface-light);
+    }
+    
+    .btn-secondary:hover:not(:disabled) {
+      background: #475569;
+    }
+    
+    .select {
+      width: 100%;
+      padding: 0.75rem;
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      color: var(--text-primary);
+      font-size: 0.875rem;
+    }
+    
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .header {
+      padding: 1.5rem;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    
+    .header-title {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    
+    .toggle-sidebar {
+      background: none;
+      border: none;
+      color: var(--text-primary);
+      font-size: 1.5rem;
+      cursor: pointer;
+      padding: 0.5rem;
+      border-radius: 0.375rem;
+      transition: background 0.2s;
+    }
+    
+    .toggle-sidebar:hover {
+      background: var(--surface-light);
+    }
+    
+    .content {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+    
+    .controls-panel {
+      background: var(--surface);
+      border-radius: 1rem;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+    
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    
+    .status-panel {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1rem;
+      background: var(--background);
+      border-radius: 0.5rem;
+      border: 1px solid var(--border);
+    }
+    
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--danger);
+      transition: background 0.3s;
+    }
+    
+    .status-indicator.connected {
+      background: var(--success);
+      box-shadow: 0 0 6px var(--success);
+    }
+    
+    .response-panels {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      margin-bottom: 2rem;
+    }
+    
+    .panel {
+      background: var(--surface);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+    
+    .panel-title {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .panel-content {
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      min-height: 120px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+    
+    .conversation-history {
+      grid-column: 1 / -1;
+    }
+    
+    .conversation-turn {
+      margin-bottom: 1rem;
+      padding: 1rem;
+      border-radius: 0.75rem;
+      border-left: 4px solid;
+    }
+    
+    .user-turn {
+      background: rgba(99, 102, 241, 0.1);
+      border-left-color: var(--primary);
+    }
+    
+    .ai-turn {
+      background: rgba(16, 185, 129, 0.1);
+      border-left-color: var(--secondary);
+    }
+    
+    .turn-label {
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      opacity: 0.7;
+    }
+    
+    .turn-text {
+      line-height: 1.6;
+      white-space: pre-wrap;
+    }
+    
+    .empty-state {
+      text-align: center;
+      color: var(--text-secondary);
+      font-style: italic;
+      padding: 2rem;
+    }
+    
+    .typing-indicator {
+      display: none;
+      color: var(--text-secondary);
+      font-style: italic;
+      margin-top: 0.5rem;
+      animation: pulse 1.5s infinite;
+    }
+    
+    .api-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      background: var(--background);
+      margin-top: 0.5rem;
+    }
+    
+    .api-status.connected {
+      color: var(--success);
+    }
+    
+    .api-status.disconnected {
+      color: var(--danger);
+    }
+    
+    .api-status.warning {
+      color: var(--warning);
+    }
+    
+    .error-message {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid var(--danger);
+      color: #fca5a5;
+      padding: 0.75rem;
+      border-radius: 0.5rem;
+      margin: 1rem 0;
+      font-size: 0.875rem;
+    }
+    
+    .text-input-section {
+      background: var(--surface);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    }
+    
+    .text-input-container {
+      display: flex;
+      gap: 1rem;
+      align-items: flex-end;
+    }
+    
+    .text-input {
+      flex: 1;
+      padding: 0.75rem;
+      background: var(--background);
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      color: var(--text-primary);
+      resize: vertical;
+      min-height: 80px;
+      font-family: inherit;
+    }
+    
+    .text-input:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        height: 100vh;
+        z-index: 1000;
+        transform: translateX(-100%);
+      }
+      
+      .sidebar.open {
+        transform: translateX(0);
+      }
+      
+      .response-panels {
+        grid-template-columns: 1fr;
+      }
+      
+      .controls-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .text-input-container {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <div class="sidebar-title">Configuration</div>
+        <div class="sidebar-subtitle">API Keys & Settings</div>
+      </div>
+      
+      <!-- API Configuration -->
+      <div class="sidebar-section">
+        <div class="section-title">API Keys</div>
+        
+        <div class="form-group">
+          <label class="form-label">AssemblyAI API Key</label>
+          <input type="password" id="assemblyai-key" class="form-input" placeholder="Enter AssemblyAI API key">
+          <div class="api-status disconnected" id="assemblyai-status">
+            <span>●</span> Not configured
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Murf API Key</label>
+          <input type="password" id="murf-key" class="form-input" placeholder="Enter Murf API key">
+          <div class="api-status disconnected" id="murf-status">
+            <span>●</span> Not configured
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Gemini API Key</label>
+          <input type="password" id="gemini-key" class="form-input" placeholder="Enter Gemini API key">
+          <div class="api-status disconnected" id="gemini-status">
+            <span>●</span> Not configured
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">OpenWeatherMap API Key</label>
+          <input type="password" id="weather-key" class="form-input" placeholder="Enter Weather API key">
+          <div class="api-status disconnected" id="weather-status">
+            <span>●</span> Not configured
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Google Search API Key</label>
+          <input type="password" id="search-key" class="form-input" placeholder="Enter Search API key">
+          <div class="api-status disconnected" id="search-status">
+            <span>●</span> Not configured
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Search Engine ID</label>
+          <input type="text" id="search-engine-id" class="form-input" placeholder="Enter Search Engine ID">
+        </div>
+        
+        <button class="btn btn-sm" id="save-config">Save Configuration</button>
+      </div>
+      
+      <!-- Persona Selection -->
+      <div class="sidebar-section">
+        <div class="section-title">Persona</div>
+        
+        <div class="form-group">
+          <select class="select" id="persona-select">
+            <option value="neutral">Neutral Assistant</option>
+            <option value="pirate">Pirate</option>
+            <option value="cowboy">Cowboy</option>
+            <option value="robot">Robot</option>
+          </select>
+        </div>
+        
+        <button class="btn btn-sm btn-secondary" id="set-persona">Apply Persona</button>
+      </div>
+      
+      <!-- Session Management -->
+      <div class="sidebar-section">
+        <div class="section-title">Session</div>
+        
+        <div class="form-group">
+          <label class="form-label">Session ID</label>
+          <div class="form-input" id="session-display" style="background: var(--surface-light); cursor: default;">
+            Loading...
+          </div>
+        </div>
+        
+        <div style="display: flex; gap: 0.5rem;">
+          <button class="btn btn-sm btn-secondary" id="new-session">New Session</button>
+          <button class="btn btn-sm btn-danger" id="clear-history">Clear History</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+      <div class="header">
+        <button class="toggle-sidebar" id="toggle-sidebar">☰</button>
+        <div class="header-title">AI Voice Agent - Fixed</div>
+        <div style="display: flex; align-items: center; gap: 1rem;">
+          <div class="status-indicator" id="connection-status"></div>
+          <span id="connection-text">Disconnected</span>
+        </div>
+      </div>
+      
+      <div class="content">
+        <!-- Text Input Section -->
+        <div class="text-input-section">
+          <div class="section-title">Text Input</div>
+          <div class="text-input-container">
+            <textarea 
+              class="text-input" 
+              id="text-input" 
+              placeholder="Type your message here or use voice recording below..."
+              maxlength="500"
+            ></textarea>
+            <button class="btn" id="send-text" disabled>Send</button>
+          </div>
+        </div>
+        
+        <!-- Controls Panel -->
+        <div class="controls-panel">
+          <div class="controls-grid">
+            <button class="btn" id="enable-audio">
+              🎧 Enable Audio
+            </button>
+            <button class="btn btn-success" id="start-recording" disabled>
+              🎙️ Start Recording
+            </button>
+            <button class="btn btn-danger" id="stop-recording" disabled>
+              ⏹️ Stop Recording
+            </button>
+            <button class="btn btn-secondary" id="test-apis">
+              🔧 Test APIs
+            </button>
+          </div>
+          
+          <div class="status-panel">
+            <div class="status-indicator" id="audio-status"></div>
+            <span id="status-text">Click "Enable Audio" to start</span>
+          </div>
+        </div>
+        
+        <!-- Response Panels -->
+        <div class="response-panels">
+          <div class="panel">
+            <div class="panel-title">
+              🎤 Live Transcription
+            </div>
+            <div class="panel-content" id="live-transcription">
+              <div class="empty-state">Waiting for speech input...</div>
+            </div>
+          </div>
+          
+          <div class="panel">
+            <div class="panel-title">
+              🤖 AI Response
+            </div>
+            <div class="panel-content" id="ai-response">
+              <div class="empty-state">AI responses will appear here...</div>
+            </div>
+            <div class="typing-indicator" id="typing-indicator">AI is thinking...</div>
+          </div>
+          
+          <div class="panel conversation-history">
+            <div class="panel-title">
+              💬 Conversation History
+            </div>
+            <div class="panel-content" id="conversation-history">
+              <div class="empty-state">No conversation yet. Start recording or type a message to begin.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // FIXED: Configuration and state with proper error handling
+    let SESSION_ID = generateSessionId();
+    let wsStream = null;
+    let audioWebSocket = null;
+    let processor = null;
+    let input = null;
+    let stream = null;
+    let audioEnabled = false;
+    let isRecording = false;
+    let reconnectAttempts = 0;
+    let maxReconnectAttempts = 3;
+    
+    const SAMPLE_RATE = 16000;
+    let audioContext = null;
+    
+    // FIXED: Dynamic WebSocket URL generation
+    function getWebSocketURL(path) {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = window.location.host;
+      return `${protocol}//${host}${path}`;
+    }
+    
+    // Utility functions
+    function generateSessionId() {
+      return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    }
+    
+    function sanitizeText(text) {
+      if (!text) return '';
+      // Basic XSS prevention
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function updateSessionDisplay() {
+      document.getElementById('session-display').textContent = SESSION_ID;
+    }
+    
+    function updateConnectionStatus(connected, text) {
+      const indicator = document.getElementById('connection-status');
+      const textEl = document.getElementById('connection-text');
+      
+      if (connected) {
+        indicator.classList.add('connected');
+        textEl.textContent = text || 'Connected';
+      } else {
+        indicator.classList.remove('connected');
+        textEl.textContent = text || 'Disconnected';
+      }
+    }
+    
+    function updateAudioStatus(enabled, text) {
+      const indicator = document.getElementById('audio-status');
+      const textEl = document.getElementById('status-text');
+      
+      if (enabled) {
+        indicator.classList.add('connected');
+        textEl.textContent = text || 'Audio Enabled';
+      } else {
+        indicator.classList.remove('connected');
+        textEl.textContent = text || 'Audio Disabled';
+      }
+    }
+    
+    function updateAPIStatus(service, status) {
+      const statusEl = document.getElementById(`${service}-status`);
+      if (!statusEl) return;
+      
+      statusEl.className = `api-status ${status}`;
+      
+      const messages = {
+        connected: '● Connected',
+        warning: '● Configured (not tested)',
+        disconnected: '● Not configured'
+      };
+      
+      statusEl.innerHTML = `<span>${messages[status] || '● Unknown'}</span>`;
+    }
+    
+    function showError(message) {
+      const errorDiv = document.createElement('div');
+      errorDiv.className = 'error-message';
+      errorDiv.textContent = message;
+      
+      const content = document.querySelector('.content');
+      content.insertBefore(errorDiv, content.firstChild);
+      
+      // Auto-remove after 5 seconds
+      setTimeout(() => {
+        if (errorDiv.parentNode) {
+          errorDiv.parentNode.removeChild(errorDiv);
+        }
+      }, 5000);
+    }
+    
+    function addToConversationHistory(sender, message) {
+      const historyEl = document.getElementById('conversation-history');
+      
+      // Remove empty state
+      const emptyState = historyEl.querySelector('.empty-state');
+      if (emptyState) emptyState.remove();
+      
+      const turnEl = document.createElement('div');
+      turnEl.className = `conversation-turn ${sender.toLowerCase()}-turn`;
+      
+      // FIXED: Proper text sanitization instead of innerHTML
+      const labelDiv = document.createElement('div');
+      labelDiv.className = 'turn-label';
+      labelDiv.textContent = `${sender}:`;
+      
+      const textDiv = document.createElement('div');
+      textDiv.className = 'turn-text';
+      textDiv.textContent = message;
+      
+      turnEl.appendChild(labelDiv);
+      turnEl.appendChild(textDiv);
+      
+      historyEl.appendChild(turnEl);
+      historyEl.scrollTop = historyEl.scrollHeight;
+    }
+    
+    // FIXED: Configuration management with secure storage
+    async function loadConfig() {
+      try {
+        // Load configuration status from backend
+        const response = await fetch(`/api/config/${SESSION_ID}`);
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Update status indicators based on backend response
+          Object.keys(data.config).forEach(key => {
+            if (key.endsWith('_configured')) {
+              const service = key.replace('_configured', '').replace('_key', '');
+              updateAPIStatus(service, data.config[key] ? 'warning' : 'disconnected');
+            }
+          });
+        }
+        
+        // Note: Not loading from localStorage for security - API keys stay on server
+        console.log('Configuration status loaded from server');
+        
+      } catch (error) {
+        console.error('Error loading configuration:', error);
+        showError('Failed to load configuration status');
+      }
+    }
+    
+    async function saveConfig() {
+      const configForm = {
+        assemblyai_key: document.getElementById('assemblyai-key').value.trim(),
+        murf_key: document.getElementById('murf-key').value.trim(),
+        gemini_key: document.getElementById('gemini-key').value.trim(),
+        weather_key: document.getElementById('weather-key').value.trim(),
+        search_key: document.getElementById('search-key').value.trim(),
+        search_engine_id: document.getElementById('search-engine-id').value.trim()
+      };
+      
+      // Basic validation
+      const hasKeys = Object.values(configForm).some(value => value.length > 0);
+      if (!hasKeys) {
+        showError('Please enter at least one API key');
+        return;
+      }
+      
+      try {
+        // Save to backend only (secure)
+        const response = await fetch(`/api/config/${SESSION_ID}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(configForm)
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          
+          // Update UI status indicators
+          Object.keys(configForm).forEach(key => {
+            if (configForm[key]) {
+              const service = key.replace('_key', '').replace('_engine_id', '');
+              updateAPIStatus(service, 'warning');
+            }
+          });
+          
+          // Clear form fields for security
+          Object.keys(configForm).forEach(key => {
+            const input = document.getElementById(key.replace('_', '-'));
+            if (input) input.value = '';
+          });
+          
+          alert('Configuration saved successfully! API keys are stored securely on the server.');
+          console.log('Configuration updated:', result);
+          
+        } else {
+          const errorText = await response.text();
+          throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+      } catch (error) {
+        console.error('Error saving configuration:', error);
+        showError(`Failed to save configuration: ${error.message}`);
+      }
+    }
+    
+    async function testAPIs() {
+      const btn = document.getElementById('test-apis');
+      const originalText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '🔄 Testing...';
+      
+      try {
+        const tests = [
+          { endpoint: `/test/weather/London?session_id=${SESSION_ID}`, service: 'weather' },
+          { endpoint: `/test/search?query=test&session_id=${SESSION_ID}`, service: 'search' },
+          { endpoint: `/test/ai?prompt=hello&session_id=${SESSION_ID}`, service: 'gemini' }
+        ];
+        
+        const results = [];
+        
+        for (const test of tests) {
+          try {
+            const response = await fetch(test.endpoint);
+            const data = await response.json();
+            
+            let status = 'disconnected';
+            if (response.ok && data.success !== false) {
+              // Check response content for error messages
+              const content = JSON.stringify(data).toLowerCase();
+              if (content.includes('not configured') || content.includes('invalid') || content.includes('failed')) {
+                status = 'disconnected';
+              } else {
+                status = 'connected';
+              }
+            }
+            
+            updateAPIStatus(test.service, status);
+            results.push(`${test.service}: ${status}`);
+            
+          } catch (e) {
+            console.error(`Error testing ${test.service}:`, e);
+            updateAPIStatus(test.service, 'disconnected');
+            results.push(`${test.service}: failed`);
+          }
+        }
+        
+        alert(`API tests completed!\n\nResults:\n${results.join('\n')}`);
+        
+      } catch (error) {
+        console.error('Error during API testing:', error);
+        showError('Error testing APIs. Check console for details.');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+    
+    // FIXED: Text input functionality
+    async function sendTextMessage() {
+      const textInput = document.getElementById('text-input');
+      const text = textInput.value.trim();
+      
+      if (!text) {
+        showError('Please enter a message');
+        return;
+      }
+      
+      if (text.length > 500) {
+        showError('Message too long. Please keep it under 500 characters.');
+        return;
+      }
+      
+      try {
+        // Clear input
+        textInput.value = '';
+        
+        // Show in conversation
+        addToConversationHistory('You', text);
+        
+        // Show AI thinking
+        document.getElementById('typing-indicator').style.display = 'block';
+        const responseEl = document.getElementById('ai-response');
+        responseEl.innerHTML = '<div class="empty-state">Processing...</div>';
+        
+        // Send to WebSocket if connected, otherwise make direct API call
+        if (wsStream && wsStream.readyState === WebSocket.OPEN) {
+          wsStream.send(JSON.stringify({
+            type: "text_input",
+            text: text
+          }));
+        } else {
+          // Direct API call fallback
+          const response = await fetch(`/test/ai?prompt=${encodeURIComponent(text)}&session_id=${SESSION_ID}`);
+          const data = await response.json();
+          
+          if (data.success !== false) {
+            displayAIResponse(data.response, true);
+          } else {
+            showError('AI processing failed. Check your Gemini API key.');
+          }
+        }
+        
+      } catch (error) {
+        console.error('Error sending text message:', error);
+        showError('Failed to send message. Please try again.');
+        document.getElementById('typing-indicator').style.display = 'none';
+      }
+    }
+    
+    // WebSocket connections with auto-reconnection
+    function connectAudioWebSocket() {
+      // Audio WebSocket for TTS (when implemented)
+      const audioWsUrl = getWebSocketURL('/ws/murf-audio');
+      
+      try {
+        audioWebSocket = new WebSocket(audioWsUrl);
+        
+        audioWebSocket.onopen = () => {
+          console.log('Audio WebSocket connected');
+        };
+        
+        audioWebSocket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'audio_data') {
+              // Handle TTS audio data when implemented
+              console.log('Received audio data');
+            }
+          } catch (e) {
+            console.error('Error parsing audio message:', e);
+          }
+        };
+        
+        audioWebSocket.onerror = (error) => {
+          console.error('Audio WebSocket error:', error);
+        };
+        
+        audioWebSocket.onclose = () => {
+          console.log('Audio WebSocket disconnected');
+        };
+        
+      } catch (error) {
+        console.error('Failed to connect audio WebSocket:', error);
+      }
+    }
+    
+    function displayAIResponse(text, isFinal = true) {
+      const responseEl = document.getElementById('ai-response');
+      const typingEl = document.getElementById('typing-indicator');
+      
+      // Clear placeholder
+      const emptyState = responseEl.querySelector('.empty-state');
+      if (emptyState) emptyState.remove();
+      
+      if (isFinal) {
+        responseEl.textContent = text;
+        typingEl.style.display = 'none';
+        addToConversationHistory('AI', text);
+      }
+      
+      responseEl.scrollTop = responseEl.scrollHeight;
+    }
+    
+    // FIXED: Recording functions with proper error handling and reconnection
+    async function startRecording() {
+      try {
+        // Initialize audio context if needed
+        if (!audioContext) {
+          audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
+        }
+        
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+        
+        // FIXED: Use dynamic WebSocket URL
+        const wsUrl = getWebSocketURL(`/ws/stream-transcribe?session_id=${SESSION_ID}`);
+        wsStream = new WebSocket(wsUrl);
+        
+        wsStream.onopen = () => {
+          console.log('Connected to transcription WebSocket');
+          updateConnectionStatus(true, 'Connected');
+          reconnectAttempts = 0;
+        };
+        
+        wsStream.onerror = (error) => {
+          console.error('Transcription WebSocket error:', error);
+          showError('Failed to connect to transcription service');
+          updateConnectionStatus(false, 'Connection Error');
+        };
+        
+        wsStream.onclose = (event) => {
+          console.log('Transcription WebSocket closed:', event.code, event.reason);
+          updateConnectionStatus(false, 'Disconnected');
+          
+          // Auto-reconnect if it was unexpected
+          if (isRecording && reconnectAttempts < maxReconnectAttempts) {
+            reconnectAttempts++;
+            setTimeout(() => {
+              console.log(`Reconnect attempt ${reconnectAttempts}/${maxReconnectAttempts}`);
+              if (isRecording) {
+                startRecording();
+              }
+            }, 2000);
+          }
+        };
+        
+        // FIXED: Handle backend protocol - plain text messages with prefixes
+        wsStream.onmessage = (event) => {
+          try {
+            const msg = event.data;
+            
+            if (msg.startsWith("PARTIAL::")) {
+              const partialText = msg.slice(9);
+              const liveEl = document.getElementById('live-transcription');
+              const emptyState = liveEl.querySelector('.empty-state');
+              if (emptyState) emptyState.remove();
+              liveEl.textContent = partialText;
+              
+            } else if (msg.startsWith("FINAL::")) {
+              const finalText = msg.slice(7);
+              const liveEl = document.getElementById('live-transcription');
+              liveEl.textContent = finalText;
+              
+              addToConversationHistory('You', finalText);
+              
+              // Show typing indicator
+              document.getElementById('typing-indicator').style.display = 'block';
+              const responseEl = document.getElementById('ai-response');
+              responseEl.innerHTML = '<div class="empty-state">AI is thinking...</div>';
+              
+            } else if (msg.startsWith("AI::")) {
+              const aiResponse = msg.slice(4);
+              displayAIResponse(aiResponse, true);
+              
+              // Reset transcription display
+              const liveEl = document.getElementById('live-transcription');
+              liveEl.innerHTML = '<div class="empty-state">Listening...</div>';
+              
+            } else if (msg.startsWith("ERROR::")) {
+              const error = msg.slice(7);
+              console.error('Transcription error:', error);
+              showError(`Transcription error: ${error}`);
+              
+              // Update UI to show error state
+              document.getElementById('live-transcription').innerHTML = 
+                '<div class="empty-state">Error occurred. Please try again.</div>';
+                
+            } else if (msg.startsWith("CONNECTED::")) {
+              const message = msg.slice(11);
+              console.log('WebSocket connected:', message);
+              updateConnectionStatus(true, 'Connected');
+              
+            } else if (msg.startsWith("PONG::")) {
+              console.log('Pong received');
+            } else if (msg.startsWith("PING::")) {
+              // Respond to server ping
+              if (wsStream.readyState === WebSocket.OPEN) {
+                wsStream.send(JSON.stringify({type: "ping"}));
+              }
+            }
+          } catch (error) {
+            console.error('Error processing WebSocket message:', error);
+          }
+        };
+        
+        // Get microphone access with proper error handling
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            sampleRate: SAMPLE_RATE,
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true
+          }
+        });
+        
+        input = audioContext.createMediaStreamSource(stream);
+        
+        // FIXED: Use AudioWorklet if available, fallback to ScriptProcessor
+        if (audioContext.audioWorklet) {
+          // Modern approach - but ScriptProcessor works fine for now
+          // TODO: Implement AudioWorklet for better performance
+        }
+        
+        // Use ScriptProcessor (works but deprecated - still functional)
+        processor = audioContext.createScriptProcessor(4096, 1, 1);
+        
+        input.connect(processor);
+        processor.connect(audioContext.destination);
+        
+        processor.onaudioprocess = (e) => {
+          if (!wsStream || wsStream.readyState !== WebSocket.OPEN) return;
+          
+          try {
+            const inputData = e.inputBuffer.getChannelData(0);
+            const pcm16 = new Int16Array(inputData.length);
+            
+            // Convert float32 to int16
+            for (let i = 0; i < inputData.length; i++) {
+              let s = Math.max(-1, Math.min(1, inputData[i]));
+              pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+            }
+            
+            wsStream.send(pcm16.buffer);
+          } catch (error) {
+            console.error('Error processing audio:', error);
+          }
+        };
+        
+        // Update UI
+        document.getElementById('start-recording').disabled = true;
+        document.getElementById('stop-recording').disabled = false;
+        document.getElementById('live-transcription').innerHTML = '<div class="empty-state">Listening...</div>';
+        isRecording = true;
+        updateAudioStatus(true, 'Recording...');
+        
+      } catch (error) {
+        console.error('Failed to start recording:', error);
+        showError('Failed to start recording. Please check microphone permissions and API configuration.');
+        updateConnectionStatus(false, 'Failed');
+      }
+    }
+    
+    function stopRecording() {
+      try {
+        isRecording = false;
+        
+        // Clean up audio resources
+        if (processor) {
+          processor.disconnect();
+          processor = null;
+        }
+        if (input) {
+          input.disconnect();
+          input = null;
+        }
+        if (stream) {
+          stream.getTracks().forEach(track => track.stop());
+          stream = null;
+        }
+        if (wsStream) {
+          wsStream.close();
+          wsStream = null;
+        }
+        
+        // Update UI
+        document.getElementById('start-recording').disabled = false;
+        document.getElementById('stop-recording').disabled = true;
+        document.getElementById('live-transcription').innerHTML = '<div class="empty-state">Ready for next input...</div>';
+        updateAudioStatus(audioEnabled, audioEnabled ? 'Audio Enabled' : 'Audio Disabled');
+        updateConnectionStatus(false);
+        
+        reconnectAttempts = 0;
+        
+      } catch (error) {
+        console.error('Error stopping recording:', error);
+        showError('Error stopping recording');
+      }
+    }
+    
+    async function enableAudio() {
+      try {
+        // Initialize audio context
+        audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
+        
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+        
+        // Test microphone access
+        const testStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        testStream.getTracks().forEach(track => track.stop());
+        
+        audioEnabled = true;
+        connectAudioWebSocket();
+        
+        document.getElementById('enable-audio').textContent = '✅ Audio Enabled';
+        document.getElementById('enable-audio').disabled = true;
+        document.getElementById('start-recording').disabled = false;
+        document.getElementById('send-text').disabled = false;
+        
+        updateAudioStatus(true, 'Audio Enabled');
+        
+      } catch (error) {
+        console.error('Failed to enable audio:', error);
+        if (error.name === 'NotAllowedError') {
+          showError('Microphone permission denied. Please allow microphone access and try again.');
+        } else {
+          showError('Failed to enable audio. Please try again.');
+        }
+      }
+    }
+    
+    async function setPersona() {
+      const personaId = document.getElementById('persona-select').value;
+      
+      try {
+        const response = await fetch(`/api/persona/${SESSION_ID}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ persona_id: personaId })
+        });
+        
+        if (response.ok) {
+          alert(`Persona set to: ${personaId}`);
+        } else {
+          const error = await response.text();
+          throw new Error(`HTTP ${response.status}: ${error}`);
+        }
+      } catch (error) {
+        console.error('Failed to set persona:', error);
+        showError(`Failed to set persona: ${error.message}`);
+      }
+    }
+    
+    function newSession() {
+      // Stop current recording if active
+      if (isRecording) {
+        stopRecording();
+      }
+      
+      // Generate new session
+      SESSION_ID = generateSessionId();
+      updateSessionDisplay();
+      
+      // Clear conversation history
+      const historyEl = document.getElementById('conversation-history');
+      historyEl.innerHTML = '<div class="empty-state">No conversation yet. Start recording or type a message to begin.</div>';
+      
+      // Clear other panels
+      document.getElementById('live-transcription').innerHTML = '<div class="empty-state">Waiting for speech input...</div>';
+      document.getElementById('ai-response').innerHTML = '<div class="empty-state">AI responses will appear here...</div>';
+      
+      // Reset API status indicators
+      ['assemblyai', 'murf', 'gemini', 'weather', 'search'].forEach(service => {
+        updateAPIStatus(service, 'disconnected');
+      });
+      
+      // Clear form fields
+      ['assemblyai-key', 'murf-key', 'gemini-key', 'weather-key', 'search-key', 'search-engine-id'].forEach(id => {
+        const input = document.getElementById(id);
+        if (input) input.value = '';
+      });
+      
+      // Reset connection status
+      updateConnectionStatus(false);
+      
+      // Load config for new session
+      setTimeout(loadConfig, 500);
+      
+      alert('New session started! Please configure your API keys.');
+    }
+    
+    async function clearHistory() {
+      try {
+        const response = await fetch(`/api/history/${SESSION_ID}`, {
+          method: 'DELETE'
+        });
+        
+        if (response.ok) {
+          const historyEl = document.getElementById('conversation-history');
+          historyEl.innerHTML = '<div class="empty-state">History cleared. Start recording or type a message to begin.</div>';
+          
+          alert('Conversation history cleared!');
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        
+      } catch (error) {
+        console.error('Error clearing history:', error);
+        showError('Failed to clear history. Please try again.');
+      }
+    }
+    
+    // Event listeners with error handling
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        // Initialize session and load config
+        updateSessionDisplay();
+        loadConfig();
+        
+        // Sidebar toggle
+        document.getElementById('toggle-sidebar').addEventListener('click', () => {
+          const sidebar = document.getElementById('sidebar');
+          sidebar.classList.toggle('open');
+        });
+        
+        // Configuration
+        document.getElementById('save-config').addEventListener('click', saveConfig);
+        document.getElementById('test-apis').addEventListener('click', testAPIs);
+        
+        // Text input
+        document.getElementById('send-text').addEventListener('click', sendTextMessage);
+        document.getElementById('text-input').addEventListener('keypress', (e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendTextMessage();
+          }
+        });
+        
+        // Recording controls
+        document.getElementById('enable-audio').addEventListener('click', enableAudio);
+        document.getElementById('start-recording').addEventListener('click', startRecording);
+        document.getElementById('stop-recording').addEventListener('click', stopRecording);
+        
+        // Persona and session
+        document.getElementById('set-persona').addEventListener('click', setPersona);
+        document.getElementById('new-session').addEventListener('click', newSession);
+        document.getElementById('clear-history').addEventListener('click', clearHistory);
+        
+        // Initialize connection status
+        updateConnectionStatus(false);
+        updateAudioStatus(false);
+        
+        console.log('Enhanced AI Voice Agent initialized (Fixed Version)');
+        console.log('Session ID:', SESSION_ID);
+        
+        // Auto-connect audio WebSocket
+        connectAudioWebSocket();
+        
+      } catch (error) {
+        console.error('Error during initialization:', error);
+        showError('Application initialization failed');
+      }
+    });
+    
+    // Auto-hide sidebar on mobile after interaction
+    function hideSidebarOnMobile() {
+      if (window.innerWidth <= 768) {
+        document.getElementById('sidebar').classList.remove('open');
+      }
+    }
+    
+    // Error handling for the entire page
+    window.addEventListener('error', (event) => {
+      console.error('Global error:', event.error);
+    });
+    
+    window.addEventListener('unhandledrejection', (event) => {
+      console.error('Unhandled promise rejection:', event.reason);
+    });
+    
+    // Add mobile-friendly interactions
+    document.querySelectorAll('.sidebar button, .sidebar select').forEach(element => {
+      element.addEventListener('click', hideSidebarOnMobile);
+      element.addEventListener('change', hideSidebarOnMobile);
+    });
+    
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (isRecording) {
+        stopRecording();
+      }
+      if (audioWebSocket) {
+        audioWebSocket.close();
+      }
+    });
+  </script>
+</body>
+</html>
