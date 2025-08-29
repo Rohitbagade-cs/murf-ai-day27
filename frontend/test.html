@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Day 18 - PCM16 Streaming + Turn Detection</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to bottom, #020617, #fca5a5, #22d3ee);
+      min-height: 100vh; padding: 2rem; display: flex;
+      justify-content: center; align-items: center;
+    }
+    .container { max-width: 850px; width: 100%; background: white;
+      border-radius: 20px; box-shadow: 0 25px 50px rgba(0,0,0,0.2);
+      overflow: hidden; transition: transform 0.5s ease;
+    }
+    .header { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      padding: 2rem; text-align: center; color: white;
+    }
+    .controls { padding: 2rem; display: flex; gap: 1rem; justify-content: center; }
+    button { padding: 0.9rem 1.8rem; border: none; border-radius: 12px;
+      font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease;
+    }
+    button:hover { transform: translateY(-2px); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    #startBtn { background: linear-gradient(135deg, #43e97b, #38f9d7); color: white; }
+    #stopBtn { background: linear-gradient(135deg, #fa709a, #fee140); color: white; }
+    #enableAudioBtn { background: linear-gradient(135deg, #667eea, #764ba2); color: white; }
+    #setPersonaBtn { background: linear-gradient(135deg, #f093fb, #f5576c); color: white; }
+    .live-section, .final-section, .llm-section, .audio-section {
+      background: #f8fafc; border-radius: 15px; padding: 1.5rem; margin-bottom: 1.5rem;
+    }
+    #liveText, #audioLogs, #llmResponse {
+      min-height: 2rem; padding: 1rem; background: white; border-radius: 10px; border: 2px dashed #e2e8f0;
+    }
+    #audioLogs {
+      max-height: 200px; overflow-y: auto;
+      font-size: 0.95rem; line-height: 1.5;
+    }
+    #llmResponse {
+      min-height: 80px; max-height: 300px; overflow-y: auto;
+      font-size: 1rem; line-height: 1.6; 
+      border-color: #10b981; /* Green border for AI response */
+    }
+    .section-title {
+      font-weight: 600; margin-bottom: 1rem; color: #374151;
+    }
+    .empty-state {
+      color: #9ca3af; font-style: italic; text-align: center; padding: 1rem;
+    }
+    #finalTurns {
+      list-style: none; padding: 0; max-height: 300px; overflow-y: auto;
+    }
+    #finalTurns li {
+      background: white; padding: 0.75rem; margin-bottom: 0.5rem;
+      border-radius: 8px; border-left: 4px solid #4facfe;
+    }
+    .conversation-turn {
+      margin-bottom: 1rem; padding: 1rem; background: white; border-radius: 10px;
+    }
+    .user-message {
+      border-left: 4px solid #4facfe; 
+    }
+    .ai-message {
+      border-left: 4px solid #10b981; 
+      background: #f0fdf4;
+    }
+    .message-label {
+      font-weight: 600; font-size: 0.9rem; color: #6b7280; margin-bottom: 0.5rem;
+    }
+    .message-text {
+      font-size: 1rem; line-height: 1.5;
+    }
+    select {
+      padding: 0.6rem; border-radius: 10px; border: 2px solid #e2e8f0;
+      font-size: 1rem; background: white;
+    }
+    .audio-status {
+      display: inline-block; padding: 0.3rem 0.8rem; border-radius: 20px;
+      font-size: 0.8rem; font-weight: 600; margin-left: 1rem;
+    }
+    .audio-enabled { background: #10b981; color: white; }
+    .audio-disabled { background: #ef4444; color: white; }
+    .typing-indicator {
+      display: none; color: #6b7280; font-style: italic;
+      animation: pulse 1.5s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h2>Voice Assistant with Live AI Response</h2>
+      <div id="audioStatus" class="audio-status audio-disabled">Audio: Disabled</div>
+    </div>
+    <div class="controls">
+      <button id="startBtn">Start Recording</button>
+      <button id="stopBtn" disabled>Stop Recording</button>
+      <button id="enableAudioBtn">Enable Audio</button>
+    </div>
+    <div class="content">
+      <div class="live-section">
+        <div class="section-title">Live Transcription:</div>
+        <div id="liveText">Ready to start listening...</div>
+      </div>
+      
+      <div class="llm-section">
+        <div class="section-title">AI Response:</div>
+        <div id="llmResponse">
+          <div class="empty-state">AI responses will appear here...</div>
+        </div>
+        <div id="typingIndicator" class="typing-indicator">AI is thinking...</div>
+      </div>
+      
+      <div class="final-section">
+        <div class="section-title">Conversation History:</div>
+        <div id="conversationHistory">
+          <div class="empty-state">No conversation yet. Click "Start Recording".</div>
+        </div>
+      </div>
+      
+      <div class="audio-section">
+        <div class="section-title">Audio Logs:</div>
+        <div id="audioLogs">No audio yet...</div>
+      </div>
+      
+      <div class="controls" style="flex-wrap: wrap; gap: 0.5rem 1rem;">
+        <select id="personaSelect">
+          <option value="neutral">Neutral</option>
+          <option value="pirate">Pirate</option>
+          <option value="cowboy">Cowboy</option>
+          <option value="robot">Robot</option>
+        </select>
+        <button id="setPersonaBtn">Set Persona</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let processor, input, wsStream, audioWebSocket, textWebSocket;
+    const SAMPLE_RATE = 16000;
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
+    const SESSION_ID = crypto.randomUUID();
+    
+    // Audio playback variables
+    let playheadTime = audioContext.currentTime;
+    let audioChunks = [];
+    let isPlaying = false;
+    let audioEnabled = false;
+    let currentAIResponse = "";
+
+    console.log(`Session ID: ${SESSION_ID}`);
+
+    // Enable Audio Button
+    document.getElementById("enableAudioBtn").onclick = async () => {
+      try {
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+        audioEnabled = true;
+        updateAudioStatus();
+        
+        if (!audioWebSocket || audioWebSocket.readyState === WebSocket.CLOSED) {
+          connectAudioWebSocket();
+        }
+        
+        document.getElementById("enableAudioBtn").textContent = "Audio Enabled";
+        document.getElementById("enableAudioBtn").disabled = true;
+        
+        console.log("Audio enabled, context state:", audioContext.state);
+      } catch (error) {
+        console.error("Failed to enable audio:", error);
+        alert("Failed to enable audio. Please try again.");
+      }
+    };
+
+    function updateAudioStatus() {
+      const statusEl = document.getElementById("audioStatus");
+      if (audioEnabled && audioContext.state === 'running') {
+        statusEl.className = "audio-status audio-enabled";
+        statusEl.textContent = "Audio: Enabled";
+      } else {
+        statusEl.className = "audio-status audio-disabled";
+        statusEl.textContent = "Audio: Disabled";
+      }
+    }
+
+    function connectAudioWebSocket() {
+      try {
+        audioWebSocket = new WebSocket("ws://127.0.0.1:8000/ws/murf-audio");
+        
+        audioWebSocket.onopen = () => {
+          console.log("Connected to /ws/murf-audio");
+          addAudioLog("Connected to audio stream");
+        };
+        
+        audioWebSocket.onclose = () => {
+          console.log("/ws/murf-audio closed");
+          addAudioLog("Audio stream disconnected");
+        };
+        
+        audioWebSocket.onerror = (error) => {
+          console.error("Audio WebSocket error:", error);
+          addAudioLog("Audio WebSocket error");
+        };
+        
+        audioWebSocket.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            
+            // Handle audio data
+            if (data.audio && audioEnabled) {
+              console.log(`Received audio chunk (${data.audio.length} chars)`);
+              addAudioLog(`Audio chunk received at ${new Date().toLocaleTimeString()}`);
+              
+              const f32 = base64ToPCMFloat32(data.audio);
+              audioChunks.push(f32);
+              
+              if (!isPlaying) {
+                isPlaying = true;
+                chunkPlay();
+              }
+            }
+            
+            // Handle text responses
+            if (data.type === "text_response" && data.text) {
+              console.log("Received text response:", data.text);
+              displayAIResponse(data.text, data.is_final);
+            }
+            
+          } catch (e) {
+            console.warn("Non-JSON message:", event.data);
+          }
+        };
+      } catch (error) {
+        console.error("Failed to connect audio WebSocket:", error);
+      }
+    }
+
+    function displayAIResponse(text, isFinal = true) {
+      const responseEl = document.getElementById("llmResponse");
+      const typingEl = document.getElementById("typingIndicator");
+      
+      if (responseEl) {
+        // Clear placeholder if first response
+        if (responseEl.textContent.includes("AI responses will appear here")) {
+          responseEl.textContent = "";
+        }
+        
+        if (isFinal) {
+          responseEl.textContent = text;
+          if (typingEl) typingEl.style.display = "none";
+          addToConversationHistory("AI", text);
+        }
+        // Auto-scroll to bottom
+        responseEl.scrollTop = responseEl.scrollHeight;
+      }
+    }
+
+    function addToConversationHistory(sender, message) {
+      const historyEl = document.getElementById("conversationHistory");
+      
+      // Remove empty state if present
+      const emptyState = historyEl.querySelector('.empty-state');
+      if (emptyState) emptyState.remove();
+      
+      const messageEl = document.createElement("div");
+      messageEl.className = `conversation-turn ${sender.toLowerCase()}-message`;
+      
+      messageEl.innerHTML = `
+        <div class="message-label">${sender}:</div>
+        <div class="message-text">${message}</div>
+      `;
+      
+      historyEl.appendChild(messageEl);
+      historyEl.scrollTop = historyEl.scrollHeight;
+    }
+
+    function resetAudioState() {
+      audioChunks = [];
+      isPlaying = false;
+      playheadTime = audioContext.currentTime;
+      currentAIResponse = "";
+    }
+
+    function addAudioLog(message) {
+      const logs = document.getElementById("audioLogs");
+      if (logs.textContent === "No audio yet...") {
+        logs.textContent = "";
+      }
+      
+      const p = document.createElement("p");
+      p.innerHTML = message;
+      p.style.marginBottom = "0.5rem";
+      logs.appendChild(p);
+      
+      logs.scrollTop = logs.scrollHeight;
+    }
+
+    // Start Recording + Stream to backend
+    document.getElementById("startBtn").onclick = async () => {
+      try {
+        wsStream = new WebSocket(`ws://localhost:8000/ws/stream-transcribe?session_id=${SESSION_ID}`);
+        
+        wsStream.onopen = () => {
+          console.log("Connected to /ws/stream-transcribe");
+          addAudioLog("Started recording session");
+        };
+        
+        wsStream.onerror = (error) => {
+          console.error("Transcription WebSocket error:", error);
+          addAudioLog("Transcription error");
+        };
+        
+        wsStream.onmessage = (event) => {
+          const msg = event.data;
+          console.log("Received:", msg);
+          
+          if (msg.startsWith("PARTIAL::")) {
+            document.getElementById("liveText").textContent = msg.slice(9);
+          } else if (msg.startsWith("FINAL::")) {
+            const finalText = msg.slice(7);
+            document.getElementById("liveText").textContent = "AI is responding...";
+            
+            // Add user message to conversation history
+            addToConversationHistory("You", finalText);
+            
+            // Reset AI response for new response
+            resetAudioState();
+            
+            // Show typing indicator
+            document.getElementById("typingIndicator").style.display = "block";
+            document.getElementById("llmResponse").innerHTML = "";
+            
+            addAudioLog(`Transcription: "${finalText}"`);
+            addAudioLog("Generating AI response...");
+            
+          } else if (msg.startsWith("ERROR::")) {
+            const error = msg.slice(7);
+            console.error("Transcription error:", error);
+            addAudioLog(`Error: ${error}`);
+          }
+        };
+
+        // Get microphone access
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: {
+            sampleRate: SAMPLE_RATE,
+            channelCount: 1,
+            echoCancellation: true,
+            noiseSuppression: true
+          }
+        });
+        
+        input = audioContext.createMediaStreamSource(stream);
+        processor = audioContext.createScriptProcessor(4096, 1, 1);
+        
+        input.connect(processor);
+        processor.connect(audioContext.destination);
+        
+        processor.onaudioprocess = (e) => {
+          if (wsStream.readyState !== WebSocket.OPEN) return;
+          
+          const inputData = e.inputBuffer.getChannelData(0);
+          const pcm16 = new Int16Array(inputData.length);
+          
+          for (let i = 0; i < inputData.length; i++) {
+            let s = Math.max(-1, Math.min(1, inputData[i]));
+            pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          }
+          
+          wsStream.send(pcm16.buffer);
+        };
+
+        document.getElementById("startBtn").disabled = true;
+        document.getElementById("stopBtn").disabled = false;
+        document.getElementById("liveText").textContent = "Listening...";
+        
+      } catch (error) {
+        console.error("Failed to start recording:", error);
+        alert("Failed to start recording. Please check microphone permissions.");
+        addAudioLog("Failed to start recording");
+      }
+    };
+
+    // Stop Recording
+    document.getElementById("stopBtn").onclick = () => {
+      try {
+        if (processor) { 
+          processor.disconnect(); 
+          processor = null;
+        }
+        if (input) { 
+          input.disconnect(); 
+          input = null;
+        }
+        if (wsStream) {
+          wsStream.close();
+          wsStream = null;
+        }
+        
+        document.getElementById("startBtn").disabled = false;
+        document.getElementById("stopBtn").disabled = true;
+        document.getElementById("liveText").textContent = "Ready to start listening...";
+        
+        addAudioLog("Recording stopped");
+        console.log("Recording stopped");
+        
+      } catch (error) {
+        console.error("Error stopping recording:", error);
+      }
+    };
+
+    // Audio Processing Functions
+    function base64ToPCMFloat32(base64) {
+      try {
+        const bin = atob(base64);
+        const len = bin.length;
+        const buf = new ArrayBuffer(len);
+        const bytes = new Uint8Array(buf);
+        
+        for (let i = 0; i < len; i++) {
+          bytes[i] = bin.charCodeAt(i);
+        }
+        
+        const dv = new DataView(buf);
+        const samples = len / 2;
+        const out = new Float32Array(samples);
+        
+        for (let i = 0; i < samples; i++) {
+          const s = dv.getInt16(i * 2, true);
+          out[i] = s / 32768.0;
+        }
+        
+        return out;
+      } catch (error) {
+        console.error("Error decoding audio:", error);
+        return new Float32Array(0);
+      }
+    }
+
+    function chunkPlay() {
+      if (audioChunks.length === 0) {
+        isPlaying = false;
+        document.getElementById("liveText").textContent = "Listening...";
+        return;
+      }
+      
+      const chunk = audioChunks.shift();
+      if (chunk.length === 0) {
+        chunkPlay();
+        return;
+      }
+      
+      try {
+        const buffer = audioContext.createBuffer(1, chunk.length, SAMPLE_RATE);
+        buffer.copyToChannel(chunk, 0);
+
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.playbackRate.value = 1.0;
+        source.connect(audioContext.destination);
+
+        const now = audioContext.currentTime;
+        if (playheadTime < now) playheadTime = now + 0.05;
+        
+        source.start(playheadTime);
+        playheadTime += buffer.duration;
+
+        source.onended = () => chunkPlay();
+        
+        console.log(`Playing audio chunk (${chunk.length} samples, duration: ${buffer.duration.toFixed(2)}s)`);
+        
+      } catch (error) {
+        console.error("Error playing audio chunk:", error);
+        addAudioLog("Audio playback error");
+        chunkPlay();
+      }
+    }
+
+    // Set Persona
+    document.getElementById("setPersonaBtn").onclick = async () => {
+      const persona_id = document.getElementById("personaSelect").value;
+      
+      try {
+        const response = await fetch(`http://localhost:8000/agent/persona/${SESSION_ID}`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({ persona_id })
+        });
+        
+        if (response.ok) {
+          addAudioLog(`Persona set to: ${persona_id}`);
+          alert(`Persona set to ${persona_id}`);
+        } else {
+          throw new Error(`HTTP ${response.status}`);
+        }
+      } catch (error) {
+        console.error("Failed to set persona:", error);
+        addAudioLog("Failed to set persona");
+        alert("Failed to set persona. Please try again.");
+      }
+    };
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      updateAudioStatus();
+      console.log("Voice Agent initialized");
+      console.log("Click 'Enable Audio' first, then 'Start Recording'");
+    });
+
+    connectAudioWebSocket();
+  </script>
+</body>
+</html>
